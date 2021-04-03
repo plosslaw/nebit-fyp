@@ -241,3 +241,61 @@ bool verifyQuasiBistochasticMatrix(matrix m) {
 void printNegativityResults(double negativity, vector<pair<double, string>> min_negativity_decomposition) {
     cout<<fixed<<setprecision(5)<<negativity<<endl;
 }
+
+
+
+
+
+
+
+vector<pair<double, string>> get_minimal_negativity_birkhoff_decomposition(matrix m) {
+    vector<pair<double, string>> result;
+    double delta = 0;
+    for (row ele : m) {
+        for (double ele2 : ele) {
+            delta = min(delta, ele2);
+        }
+    }
+
+    /**
+     * S_ = (1+d*delta) A - d*delta B
+     */
+
+    matrix positive_part;
+    matrix all_one_matrix_normalized;
+
+    for (row ele : m) {
+        vector<double> temp_row;
+        double normalized_ones = 1.0/m.size(); // 1/d
+        double positive_norm_constant = 1.0/(1.0 + m.size()*delta); // 1/(1+d*delta)
+        vector<double> temp_ones_row(m.size(), normalized_ones);
+        for (double ele2 : ele) {
+            if ((ele2 + delta)*positive_norm_constant < EPS) {
+                temp_row.push_back(0);
+            } else {
+                temp_row.push_back((ele2 + delta)*positive_norm_constant);
+            }
+        }
+        positive_part.push_back(temp_row);
+        all_one_matrix_normalized.push_back(temp_ones_row);
+    }
+
+    vector<vector<pair<double, string>>> positive_part_normalized_decomposition =
+        DFS_all_birkhoff_decomposition(positive_part);
+    
+    vector<vector<pair<double, string>>> all_ones_normalized_decomposition = 
+        DFS_all_birkhoff_decomposition(all_one_matrix_normalized);
+
+
+    for (vector<pair<double, string>> positive_part_ele : positive_part_normalized_decomposition) {
+        for (vector<pair<double, string>> all_ones_ele : all_ones_normalized_decomposition) {
+
+        }
+    }
+
+    return result;
+}
+
+vector<vector<pair<double, string>>> DFS_all_birkhoff_decomposition(matrix &m) {
+
+}

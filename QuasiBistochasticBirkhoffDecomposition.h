@@ -26,4 +26,5 @@ bool verifyQuasiBistochasticMatrix(matrix m);
 void printNegativityResults(double negativity, std::vector<std::pair<double, std::string>> min_negativity_decomposition);
 void printMostNegativeSingleQubitRotation();
 
-std::vector<double> get_minimal_negativity_birkhoff_decomposition(matrix m);
+std::vector<std::pair<double, std::string>> get_minimal_negativity_birkhoff_decomposition(matrix m);
+std::vector<std::vector<std::pair<double, std::string>>> DFS_all_birkhoff_decomposition(matrix &m);
