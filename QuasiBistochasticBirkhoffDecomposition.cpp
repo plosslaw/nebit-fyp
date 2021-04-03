@@ -6,13 +6,14 @@ using namespace std;
 
 
 const double EPS = 1e-7;
+const double INF = 1e7;
 
 int main() {
-    printProgressBar();
+    // printProgressBar();
     matrix user_matrix;
 
     int option = parseProgramMode();
-    vector<pair<double, string>> min_negativity_decomposition;
+    pair<double, vector<pair<double, vector<int>>>> min_negativity_decomposition;
     switch (option) {
     case 1:
         cout<<"\nOption 1 chosen\n\n";
@@ -30,9 +31,12 @@ int main() {
         cout<<"Computing negativity of minimal negativity Birkhoff decomposition...\n\n";
 
         min_negativity_decomposition = get_minimal_negativity_birkhoff_decomposition(user_matrix);
+
+        printNegativityResults(min_negativity_decomposition.first, min_negativity_decomposition.second);
         break;
     case 2:
         cout<<"\nOption 2 chosen\n\n";
+        cout<<"This feature will be added in future updates when we find a better way to reduce \nthe time complexity of finding the minimal negativity Birkhoff decomposition\n\n";
         break;
     case 3:
         cout<<"\nProgram will now end. Have a nice day.\n\n";
@@ -133,7 +137,7 @@ matrix parseUserInputMatrix() {
     cout<<"\n==========Input Matrix==========\n\n";
     for (row ele : m) {
         for (double ele2 : ele) {
-            cout<<ele2<<"\t";
+            cout<<fixed<<setprecision(3)<<ele2<<"\t";
         }
         cout<<"\n\n";
     }
@@ -240,8 +244,84 @@ bool verifyQuasiBistochasticMatrix(matrix m) {
     return true;
 }
 
-void printNegativityResults(double negativity, vector<pair<double, string>> min_negativity_decomposition) {
-    cout<<fixed<<setprecision(5)<<negativity<<endl;
+void printNegativityResults(double negativity, vector<pair<double, vector<int>>> min_negativity_decomposition) {
+    if (min_negativity_decomposition.size() == 0) {
+        return;
+    }
+
+    vector<pair<double, vector<int>>> positive_part;
+    vector<pair<double, vector<int>>> negative_part;
+    int size = min_negativity_decomposition[0].second.size();
+    for (pair<double, vector<int>> ele : min_negativity_decomposition) {
+        if (ele.first < 0) {
+            negative_part.push_back(ele);
+        }else if (ele.first > 0) {
+            positive_part.push_back(ele);
+        }
+    }
+    cout<<"======POSITIVE PART DECOMPOSITION======\n";
+    for (pair<double, vector<int>> ele : positive_part) {
+        cout<<ele.first<<" * [ ";
+        for (int perm_ele : ele.second) {
+            cout<<perm_ele<<" ";
+        }
+        cout<<"]\n";
+    }
+    cout<<"\n======NEGATIVE PART DECOMPOSITION======\n";
+    for (pair<double, vector<int>> ele : negative_part) {
+        cout<<ele.first<<" * [ ";
+        for (int perm_ele : ele.second) {
+            cout<<perm_ele<<" ";
+        }
+        cout<<"]\n";
+    }
+
+    matrix positive_matrix;
+    for (int i = 0; i < size; i++) {
+        row zero_row(size, 0);
+        positive_matrix.push_back(zero_row);
+    }
+    for (pair<double, vector<int>> ele : positive_part) {
+        for (int j = 0; j < ele.second.size(); j ++) {
+            int perm_ele = ele.second[j];
+            positive_matrix[j][perm_ele] += ele.first;
+        }
+    }
+
+    matrix negative_matrix;
+    for (int i = 0; i < size; i++) {
+        row zero_row(size, 0);
+        negative_matrix.push_back(zero_row);
+    }
+    for (pair<double, vector<int>> ele : negative_part) {
+        for (int j = 0; j < ele.second.size(); j ++) {
+            int perm_ele = ele.second[j];
+            negative_matrix[j][perm_ele] += ele.first;
+        }
+    }
+
+
+
+    cout<<"\n======POSITIVE MATRIX PART======\n";
+    for (row ele : positive_matrix) {
+        for (double ele2 : ele) {
+            cout<<fixed<<setprecision(3)<<ele2<<"\t";
+        }
+        cout<<"\n\n";
+    }
+
+    cout<<"\n======NEGATIVE MATRIX PART======\n";
+    for (row ele : negative_matrix) {
+        for (double ele2 : ele) {
+            cout<<fixed<<setprecision(3)<<ele2<<"\t";
+        }
+        cout<<"\n\n";
+    }
+
+    cout<<"The negativity of the minimal negativity Birkhoff Decomposition is \n\n";
+    cout<<fixed<<setprecision(5)<<negativity<<"\n\n";
+
+
 }
 
 
@@ -250,14 +330,16 @@ void printNegativityResults(double negativity, vector<pair<double, string>> min_
 
 
 
-vector<pair<double, string>> get_minimal_negativity_birkhoff_decomposition(matrix m) {
-    vector<pair<double, string>> result;
+pair<double, vector<pair<double, vector<int>>>> get_minimal_negativity_birkhoff_decomposition(matrix m) {
+    vector<pair<double, vector<int>>> results;
     double delta = 0;
     for (row ele : m) {
         for (double ele2 : ele) {
             delta = min(delta, ele2);
         }
     }
+    delta = abs(delta); //make delta positive
+    // cout<<delta<<'\n';
 
     /**
      * S_ = (1+d*delta) A - d*delta B
@@ -276,11 +358,14 @@ vector<pair<double, string>> get_minimal_negativity_birkhoff_decomposition(matri
         for (double ele2 : ele) {
             if ((ele2 + delta)*positive_norm_constant < EPS) {
                 temp_row.push_back(0);
+                // cout<<"0\t";
             } else {
                 temp_row.push_back((ele2 + delta)*positive_norm_constant);
                 num_of_nonzero_entries_in_positive++;
+                // cout<<(ele2 + delta)*positive_norm_constant<<"\t";
             }
         }
+        // cout<<'\n';
         positive_part.push_back(temp_row);
         all_one_matrix_normalized.push_back(temp_ones_row);
     }
@@ -290,28 +375,140 @@ vector<pair<double, string>> get_minimal_negativity_birkhoff_decomposition(matri
     DFS_all_birkhoff_decomposition(positive_part_normalized_decompositions, positive_part, vector<int>{}, set<int>{}, positive_part_intermediate_results, num_of_nonzero_entries_in_positive);
     
     vector<vector<pair<double, vector<int>>>> all_ones_normalized_decompositions;
+    // vector<pair<double, vector<int>>> sample_decomposition;
+    // sample_decomposition.push_back({0.25, vector<int>{0,1,2,3}});
+    // sample_decomposition.push_back({0.25, vector<int>{1,0,3,2}});
+    // sample_decomposition.push_back({0.25, vector<int>{3,2,1,0}});
+    // sample_decomposition.push_back({0.25, vector<int>{2,3,0,1}});
+    // all_ones_normalized_decompositions.push_back(sample_decomposition);
     vector<pair<double, vector<int>>> all_ones_intermediate_results;
     DFS_all_birkhoff_decomposition(all_ones_normalized_decompositions, all_one_matrix_normalized, vector<int>{}, set<int>{}, all_ones_intermediate_results, m.size() * m.size());
+    
+    vector<vector<pair<double, vector<int>>>> positive_part_normalized_decompositions_condensed;
+    vector<vector<pair<double, vector<int>>>> all_ones_normalized_decompositions_condensed;
 
-    for (vector<pair<double, vector<int>>> positive_part_decomposition : positive_part_normalized_decompositions) {
-        cout<<"===POSSIBLE DECOMPOSITION===\n\n";
-        for (pair<double, vector<int>> positive_part_terms : positive_part_decomposition) {
-            cout<<positive_part_terms.first<<" [ ";
-            for (int perm_matrix_ele : positive_part_terms.second) {
-                cout<<perm_matrix_ele<<" ";
+    set<string> unique_set_ones;
+    for (vector<pair<double, vector<int>>> all_ones_decomposition : all_ones_normalized_decompositions) {
+        vector<string> temp_vector;
+        for (pair<double, vector<int>> all_ones_term : all_ones_decomposition) {
+            string key = "";
+            for (int ele : all_ones_term.second) {
+                key += to_string(ele) + ",";
             }
-            cout<<"] ";
+            temp_vector.push_back(key);
         }
-        cout<<'\n';
+        sort(temp_vector.begin(), temp_vector.end());
+        string set_key = "";
+        for (string ele : temp_vector) {
+            set_key += ele + ",";
+        }
+        if (unique_set_ones.find(set_key) == unique_set_ones.end()) {
+            unique_set_ones.insert(set_key);
+            all_ones_normalized_decompositions_condensed.push_back(all_ones_decomposition);
+        }
+    }
+
+    set<string> unique_set_positive_part;
+    for (vector<pair<double, vector<int>>> positive_part_decomposition : positive_part_normalized_decompositions) {
+        vector<string> temp_vector;
+        for (pair<double, vector<int>> positive_part_term : positive_part_decomposition) {
+            string key = "";
+            for (int ele : positive_part_term.second) {
+                key += to_string(ele) + ",";
+            }
+            temp_vector.push_back(key);
+        }
+        sort(temp_vector.begin(), temp_vector.end());
+        string set_key = "";
+        for (string ele : temp_vector) {
+            set_key += ele + ",";
+        }
+        if (unique_set_positive_part.find(set_key) == unique_set_positive_part.end()) {
+            unique_set_positive_part.insert(set_key);
+            positive_part_normalized_decompositions_condensed.push_back(positive_part_decomposition);
+        }
     }
 
     // for (vector<pair<double, vector<int>>> positive_part_decomposition : positive_part_normalized_decompositions) {
-    //     for (vector<pair<double, vector<int>>> all_ones_decomposition : all_ones_normalized_decompositions) {
-
+    //     cout<<"===POSSIBLE DECOMPOSITION===\n\n";
+    //     for (pair<double, vector<int>> positive_part_term : positive_part_decomposition) {
+    //         cout<<positive_part_term.first<<" [ ";
+    //         for (int perm_matrix_ele : positive_part_term.second) {
+    //             cout<<perm_matrix_ele<<" ";
+    //         }
+    //         cout<<"] ";
     //     }
+    //     cout<<'\n';
     // }
 
-    return result;
+    long long chosen_positive_decomposition;
+    long long chosen_ones_decomposition;
+    double minimal_negativity = INF;
+    for (int i = 0; i < positive_part_normalized_decompositions_condensed.size(); i++) {
+        for (int j = 0; j < all_ones_normalized_decompositions_condensed.size(); j++) {
+            vector<pair<double, vector<int>>> positive_part_decomposition = positive_part_normalized_decompositions_condensed[i];
+            vector<pair<double, vector<int>>> all_ones_decomposition = all_ones_normalized_decompositions_condensed[j];
+            map<string, double> summing_up_coefficients;
+
+            double temp_negativity = 0;
+            for (pair<double, vector<int>> positive_part_term : positive_part_decomposition) {
+                string map_key = "";
+                for (int ele : positive_part_term.second) {
+                    map_key += to_string(ele)+",";
+                }
+                summing_up_coefficients.insert({map_key, (1 + m.size() * delta) * positive_part_term.first});
+                // summing_up_coefficients[map_key] = (1 + m.size() * delta) * positive_part_term.first;
+            }
+            for (pair<double, vector<int>> all_ones_term : all_ones_decomposition) {
+                string map_key = "";
+                for (int ele : all_ones_term.second) {
+                    map_key += to_string(ele)+",";
+                }
+                if (summing_up_coefficients.find(map_key) == summing_up_coefficients.end()) {
+                    temp_negativity += (m.size() * delta) * all_ones_term.first;
+                } else {
+                    double temp_coefficient = summing_up_coefficients[map_key] - (m.size() * delta) * all_ones_term.first;
+                    if (temp_coefficient < 0) {
+                        temp_negativity += abs(temp_coefficient);
+                    }
+                }
+            }
+            if (minimal_negativity > temp_negativity) {
+                minimal_negativity = temp_negativity;
+                chosen_positive_decomposition = i;
+                chosen_ones_decomposition = j;
+            }
+        }
+    }
+    // cout<<minimal_negativity<<'\n';
+    map<string, double> summing_up_coefficients;
+
+    for (pair<double, vector<int>> positive_part_term : positive_part_normalized_decompositions_condensed[chosen_positive_decomposition]) {
+        string map_key = "";
+        for (int ele : positive_part_term.second) {
+            map_key += to_string(ele) + ",";
+        }
+        summing_up_coefficients.insert({map_key, (1 + m.size() * delta) * positive_part_term.first});
+        // summing_up_coefficients[map_key] = (1 + m.size() * delta) * positive_part_term.first;
+    }
+    for (pair<double, vector<int>> all_ones_term : all_ones_normalized_decompositions_condensed[chosen_ones_decomposition]) {
+        string map_key = "";
+        for (int ele : all_ones_term.second) {
+            map_key += to_string(ele) + ",";
+        }
+        if (summing_up_coefficients.find(map_key) == summing_up_coefficients.end()) {
+            results.push_back({(m.size() * delta * -1) * all_ones_term.first, all_ones_term.second});
+        } else {
+            summing_up_coefficients[map_key] -= (m.size() * delta) * all_ones_term.first;
+
+        }
+    }
+
+    for (pair<string, double> ele : summing_up_coefficients) {
+        results.push_back({ele.second, convertCSVToVector(ele.first)});
+    }
+
+    return {minimal_negativity, results};
 }
 
 void DFS_all_birkhoff_decomposition(vector<vector<pair<double, vector<int>>>> &results, matrix &m, 
@@ -357,4 +554,19 @@ void DFS_all_birkhoff_decomposition(vector<vector<pair<double, vector<int>>>> &r
         // permutation_set.insert(i);
         DFS_all_birkhoff_decomposition(results, m, copy_permutation, copy_permutation_set, intermediate_results, remaining_entries);
     }
+}
+
+vector<int> convertCSVToVector(string csv_string) {
+    vector<int> results_vector;
+    string temp_string;
+    string csv_string_copy = csv_string;
+    if (csv_string.at(csv_string.size()-1) == ',') {
+        // csv_string_trimmed = csv_string.substr(0, csv_string.size()-1);
+        csv_string_copy.pop_back();
+    }
+    stringstream ss(csv_string_copy);
+    while (getline(ss, temp_string, ',')) {
+        results_vector.push_back(stoi(temp_string));
+    }
+    return results_vector;
 }
