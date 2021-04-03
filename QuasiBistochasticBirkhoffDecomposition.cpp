@@ -12,6 +12,7 @@ int main() {
     matrix user_matrix;
 
     int option = parseProgramMode();
+    vector<pair<double, string>> min_negativity_decomposition;
     switch (option) {
     case 1:
         cout<<"\nOption 1 chosen\n\n";
@@ -28,6 +29,7 @@ int main() {
 
         cout<<"Computing negativity of minimal negativity Birkhoff decomposition...\n\n";
 
+        min_negativity_decomposition = get_minimal_negativity_birkhoff_decomposition(user_matrix);
         break;
     case 2:
         cout<<"\nOption 2 chosen\n\n";
@@ -263,6 +265,8 @@ vector<pair<double, string>> get_minimal_negativity_birkhoff_decomposition(matri
 
     matrix positive_part;
     matrix all_one_matrix_normalized;
+    
+    int num_of_nonzero_entries_in_positive = 0;
 
     for (row ele : m) {
         vector<double> temp_row;
@@ -274,28 +278,83 @@ vector<pair<double, string>> get_minimal_negativity_birkhoff_decomposition(matri
                 temp_row.push_back(0);
             } else {
                 temp_row.push_back((ele2 + delta)*positive_norm_constant);
+                num_of_nonzero_entries_in_positive++;
             }
         }
         positive_part.push_back(temp_row);
         all_one_matrix_normalized.push_back(temp_ones_row);
     }
 
-    vector<vector<pair<double, string>>> positive_part_normalized_decomposition =
-        DFS_all_birkhoff_decomposition(positive_part);
+    vector<vector<pair<double, vector<int>>>> positive_part_normalized_decompositions;
+    vector<pair<double, vector<int>>> positive_part_intermediate_results;
+    DFS_all_birkhoff_decomposition(positive_part_normalized_decompositions, positive_part, vector<int>{}, set<int>{}, positive_part_intermediate_results, num_of_nonzero_entries_in_positive);
     
-    vector<vector<pair<double, string>>> all_ones_normalized_decomposition = 
-        DFS_all_birkhoff_decomposition(all_one_matrix_normalized);
+    vector<vector<pair<double, vector<int>>>> all_ones_normalized_decompositions;
+    vector<pair<double, vector<int>>> all_ones_intermediate_results;
+    DFS_all_birkhoff_decomposition(all_ones_normalized_decompositions, all_one_matrix_normalized, vector<int>{}, set<int>{}, all_ones_intermediate_results, m.size() * m.size());
 
-
-    for (vector<pair<double, string>> positive_part_ele : positive_part_normalized_decomposition) {
-        for (vector<pair<double, string>> all_ones_ele : all_ones_normalized_decomposition) {
-
+    for (vector<pair<double, vector<int>>> positive_part_decomposition : positive_part_normalized_decompositions) {
+        cout<<"===POSSIBLE DECOMPOSITION===\n\n";
+        for (pair<double, vector<int>> positive_part_terms : positive_part_decomposition) {
+            cout<<positive_part_terms.first<<" [ ";
+            for (int perm_matrix_ele : positive_part_terms.second) {
+                cout<<perm_matrix_ele<<" ";
+            }
+            cout<<"] ";
         }
+        cout<<'\n';
     }
+
+    // for (vector<pair<double, vector<int>>> positive_part_decomposition : positive_part_normalized_decompositions) {
+    //     for (vector<pair<double, vector<int>>> all_ones_decomposition : all_ones_normalized_decompositions) {
+
+    //     }
+    // }
 
     return result;
 }
 
-vector<vector<pair<double, string>>> DFS_all_birkhoff_decomposition(matrix &m) {
+void DFS_all_birkhoff_decomposition(vector<vector<pair<double, vector<int>>>> &results, matrix &m, 
+    vector<int> permutation, set<int> permutation_set, vector<pair<double, vector<int>>> &intermediate_results, int remaining_entries) {
+    if (remaining_entries == 0) {
+        vector<pair<double, vector<int>>>copy_intermediate_results = intermediate_results;
+        results.push_back(copy_intermediate_results);
+        return;
+    }
 
+    if (permutation.size() == m.size()) {
+        double min_ele = m[0][permutation[0]];
+        int new_zero_entries = 0;
+        for (int i = 0; i < permutation.size(); i++) {
+            min_ele = min(min_ele, m[i][permutation[i]]);
+        }
+        matrix copy_m = m;
+        vector<pair<double, vector<int>>> copy_intermediate_results = intermediate_results;
+        for (int i = 0; i < permutation.size(); i++) {
+            copy_m[i][permutation[i]] -= min_ele;
+            if (copy_m[i][permutation[i]] < EPS) {
+                copy_m[i][permutation[i]] = 0;
+                new_zero_entries++;
+            }
+        }
+        copy_intermediate_results.push_back({min_ele, permutation});
+        return DFS_all_birkhoff_decomposition(results, copy_m, vector<int>{}, set<int>{}, copy_intermediate_results, remaining_entries - new_zero_entries);
+    }
+
+    for (int i = 0; i < m.size(); i++) {
+        if (permutation_set.find(i) != permutation_set.end()) {
+            continue;
+        }
+        double ele = m[permutation.size()][i];
+        if (ele == 0) {
+            continue;
+        }
+        vector<int> copy_permutation = permutation;
+        set<int> copy_permutation_set = permutation_set;
+        copy_permutation.push_back(i);
+        copy_permutation_set.insert(i);
+        // permutation.push_back(i);
+        // permutation_set.insert(i);
+        DFS_all_birkhoff_decomposition(results, m, copy_permutation, copy_permutation_set, intermediate_results, remaining_entries);
+    }
 }
