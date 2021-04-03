@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <iostream>
-#include <limits>
 #include <math.h>
 #include <set>
 #include <string>
@@ -14,5 +13,5 @@ struct Graph {
 typedef std::vector<double> column;
 typedef std::vector<column> matrix;
 
-
+int parseProgramMode();
 std::vector<double> get_minimal_negativity_birkhoff_decomposition(matrix m);
