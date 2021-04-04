@@ -30,4 +30,7 @@ void printMostNegativeSingleQubitRotation();
 
 std::pair<double, std::vector<std::pair<double, std::vector<int>>>> get_minimal_negativity_birkhoff_decomposition(matrix m);
 void DFS_all_birkhoff_decomposition(std::vector<std::vector<std::pair<double, std::vector<int>>>> &results, matrix &m, 
-    std::vector<int> permutation, std::set<int> permutation_set, std::vector<std::pair<double, std::vector<int>>> &intermediate_results, int remaining_entries);
+    std::vector<std::vector<int>> &all_permutation_matrices, std::vector<std::pair<double, std::vector<int>>> &intermediate_results, int remaining_entries);
+
+
+long long factorial(int n);
