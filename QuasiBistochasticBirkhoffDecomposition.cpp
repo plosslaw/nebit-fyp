@@ -145,7 +145,6 @@ int parseInteger() {
     while (true) {
         string input_string;
         getline(cin,input_string);
-        cout<<input_string;
         input_string.erase(remove_if(input_string.begin(), input_string.end(), ::isspace), input_string.end());
         char *p;
         input = strtol(input_string.c_str(), &p, 10);
