@@ -6,7 +6,7 @@
 using namespace std;
 
 
-const double EPS = 1e-7;
+const double EPS = 1e-6;
 const double INF = 1e7;
 
 int main() {
@@ -46,12 +46,6 @@ int main() {
         throw "Unexpected path\n";
     }
     
-
-
-
-
-
-
 
 
     return 0;
@@ -127,7 +121,7 @@ matrix parseUserInputMatrix() {
         if (size > 0) {
             break;
         } else {
-            cout<<"Please enter an integer greater than 0\n";
+            // cout<<"Please enter an integer greater than 0\n";
         }
     }
 
@@ -151,6 +145,7 @@ int parseInteger() {
     while (true) {
         string input_string;
         getline(cin,input_string);
+        cout<<input_string;
         input_string.erase(remove_if(input_string.begin(), input_string.end(), ::isspace), input_string.end());
         char *p;
         input = strtol(input_string.c_str(), &p, 10);
@@ -454,7 +449,6 @@ pair<double, vector<pair<double, vector<int>>>> get_minimal_negativity_birkhoff_
             positive_part_normalized_decompositions_condensed.push_back(positive_part_decomposition);
         }
     }
-    cout<<positive_part_normalized_decompositions_condensed.size()<<" "<<all_ones_normalized_decompositions_condensed.size()<<'\n';
 
 
     // for (vector<pair<double, vector<int>>> positive_part_decomposition : positive_part_normalized_decompositions) {
@@ -557,6 +551,7 @@ void DFS_all_birkhoff_decomposition(vector<vector<pair<double, vector<int>>>> &r
         bool skip = false;
         for (int j = 0; j < permutation.size(); j ++) {
             if (m[j][permutation[j]] < EPS) {
+                m[j][permutation[j]] = 0;
                 skip = true;
                 all_permutation_matrices_copy.erase(all_permutation_matrices_copy.begin()+i);
                 break;
