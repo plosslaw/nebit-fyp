@@ -739,11 +739,11 @@ pair<double, vector<pair<double, vector<int>>>> performRandomTrialsOfBirkhoffDec
     }
     printProgressBar(progress);
 
-    // for (double ele : all_negativities) {
-    //     cout<<"tried negativity: "<<ele<<'\n';
-    // }
+    for (double ele : all_negativities) {
+        cout<<"tried negativity: "<<ele<<'\n';
+    }
 
-    // cout<<endl;
+    cout<<endl;
 
 
     map<string, double> summing_up_coefficients;
@@ -797,13 +797,26 @@ void DFS_random_birkhoff_decomposition(vector<pair<double, vector<int>>> &result
         }
     }
     int num_of_matchings = bipartiteGraph.hopcroftKarp();
+    int counter = 0;
+    
     if (num_of_matchings < m.size()) {
-        throw "Hopcroft-Karp algorithm failed to find perfect matching";
+        cout<<"Hopcroft-Karp algorithm failed to find perfect matching, retrying\n";
+        for (int i = 0; i < m.size(); i++) {
+            for (int j = 0; j < m.size(); j++) {
+                if (m[i][j] < EPS) {
+                    if (m[i][j] != 0) {
+                        counter++;
+                    }
+                    copy_m[i][j] = 0;
+                }
+            }
+        }
+        return DFS_random_birkhoff_decomposition(results, copy_m, remaining_entries - counter);
+
     }
     vector<int> current_perm = bipartiteGraph.getPermutationMatrix();
 
     double min_ele = m[0][current_perm[0]];
-    int counter = 0;
     for (int i = 0; i < current_perm.size(); i++) {
         if (m[i][current_perm[i]] < EPS) {
             if (m[i][current_perm[i]] != 0) {
