@@ -691,9 +691,10 @@ pair<double, vector<pair<double, vector<int>>>> performRandomTrialsOfBirkhoffDec
      */
     double progress = 0.0;
     double step_interval = 1.0/num_of_trials;
+    vector<double> all_negativities;
 
     for (int i = 0; i < num_of_trials; i++) {
-        // printProgressBar(progress);
+        printProgressBar(progress);
         double temp_minimal_negativity = 0.0;
         vector<pair<double, vector<int>>> temp_ones_decomposition;
         vector<pair<double, vector<int>>> temp_positive_decomposition;
@@ -726,6 +727,9 @@ pair<double, vector<pair<double, vector<int>>>> performRandomTrialsOfBirkhoffDec
             }
         }
 
+        // for debugging to show negativities of all tried decompositions
+        // all_negativities.push_back(temp_minimal_negativity); 
+
         if (temp_minimal_negativity < minimal_negativity) {
             minimal_negativity = temp_minimal_negativity;
             chosen_ones_decomposition = temp_ones_decomposition;
@@ -733,7 +737,14 @@ pair<double, vector<pair<double, vector<int>>>> performRandomTrialsOfBirkhoffDec
         }
         progress += step_interval;
     }
-    // printProgressBar(progress);
+    printProgressBar(progress);
+
+    // for (double ele : all_negativities) {
+    //     cout<<"tried negativity: "<<ele<<'\n';
+    // }
+
+    // cout<<endl;
+
 
     map<string, double> summing_up_coefficients;
 
@@ -791,12 +802,6 @@ void DFS_random_birkhoff_decomposition(vector<pair<double, vector<int>>> &result
     }
     vector<int> current_perm = bipartiteGraph.getPermutationMatrix();
 
-    // for (int ele : current_perm) {
-    //     cout<<ele<<" ";
-    // }
-
-    // cout<<endl;
-
     double min_ele = m[0][current_perm[0]];
     int counter = 0;
     for (int i = 0; i < current_perm.size(); i++) {
@@ -808,7 +813,7 @@ void DFS_random_birkhoff_decomposition(vector<pair<double, vector<int>>> &result
         }
         min_ele = min(min_ele, copy_m[i][current_perm[i]]);
     }
-    cout<<min_ele<<endl;
+
     if (min_ele == 0) {
         return DFS_random_birkhoff_decomposition(results, copy_m, remaining_entries - counter);
     }
@@ -823,61 +828,6 @@ void DFS_random_birkhoff_decomposition(vector<pair<double, vector<int>>> &result
     results.push_back({min_ele, current_perm});
 
     return DFS_random_birkhoff_decomposition(results, copy_m, remaining_entries - new_zero_entries);
-
-
-    // if (current_perm.size() == m.size()) {
-    //     set<int> new_perm_set;
-
-    //     int new_zero_entries = 0;
-    //     matrix copy_m = m;
-    //     double min_ele = m[0][current_perm[0]];
-    //     int counter = 0;
-    //     for (int i = 0; i < current_perm.size(); i++) {
-    //         if (m[i][current_perm[i]] < EPS) {
-    //             if (m[i][current_perm[i]] != 0) {
-    //                 counter++;
-    //             }
-    //             copy_m[i][current_perm[i]] = 0;
-    //         }
-    //         min_ele = min(min_ele, copy_m[i][current_perm[i]]);
-    //     }
-    //     if (min_ele == 0) {
-    //         return DFS_random_birkhoff_decomposition(results, copy_m, new_perm_set, vector<int>{}, remaining_entries - counter);
-    //     }
-
-    //     for (int i = 0; i < current_perm.size(); i++) {
-    //         copy_m[i][current_perm[i]] -= min_ele;
-    //         if (copy_m[i][current_perm[i]] < EPS) {
-    //             copy_m[i][current_perm[i]] = 0;
-    //             new_zero_entries++;
-    //         }
-    //     }
-    //     results.push_back({min_ele, current_perm});
-
-    //     return DFS_random_birkhoff_decomposition(results, copy_m, new_perm_set, vector<int>{}, remaining_entries - new_zero_entries);
-    // }
-
-    // vector<int> new_current_perm = current_perm;
-    // set<int> new_perm_set = perm_set;
-    // vector<int> allowed_perm;
-
-    // for (int i = 0; i < m.size(); i++) {
-    //     if (new_perm_set.find(i) == new_perm_set.end() && m[new_perm_set.size()][i] != 0) {
-    //         allowed_perm.push_back(i);
-    //     } 
-    // }
-
-    // uid randInt(0, allowed_perm.size() -1);
-    // int random_int = randInt(rng);
-    // int chosen_random_perm = allowed_perm[random_int];
-
-    // // int chosen_random_perm = rand() % allowed_perm.size();
-    // new_perm_set.insert(chosen_random_perm);
-    // new_current_perm.push_back(chosen_random_perm);
-
-
-    // DFS_random_birkhoff_decomposition(results, m, new_perm_set, new_current_perm, remaining_entries);
-
 
 }
 
@@ -931,7 +881,17 @@ bool BipartiteGraph::bfs() {
 
 bool BipartiteGraph::dfs(int u) {
     if (u != 0) {
-        for (int ele : this->edges[u]) {
+        vector<int> copy_edges = this->edges[u];
+        uid randInt(0, copy_edges.size() -1);
+        for (int i = 0; i < copy_edges.size(); i++) {
+            int random_int_1 = randInt(rng);
+            int random_int_2 = randInt(rng);
+            int buffer = copy_edges[random_int_1];
+            copy_edges[random_int_1] = copy_edges[random_int_2];
+            copy_edges[random_int_2] = buffer;
+        }
+
+        for (int ele : copy_edges) {
             if (this->distance[this->pairN[ele]] == this->distance[u] + 1) {
                 if (dfs(this->pairN[ele]) == true) {
                     this->pairM[u] = ele;
