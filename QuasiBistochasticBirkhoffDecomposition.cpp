@@ -6,6 +6,9 @@ using namespace std;
 const double EPS = 1e-6;
 const double INF = 1e7;
 
+mt19937 rng(chrono::steady_clock::now().time_since_epoch().count());
+#define uid uniform_int_distribution<int>
+
 int main() {
     // printProgressBar();
     matrix user_matrix;
@@ -39,7 +42,7 @@ int main() {
         break;
     case 3:
         cout<<"\nOption 3 chosen\n\n";
-        cout<<"How many times do you want to perform the randomized search for minimal decomposition for the given quasi-stochastic matrix\n\n";
+        cout<<"How many times do you want to perform the randomized search for minimal decomposition \nfor the given quasi-stochastic matrix ?\n\n";
         while (true) {
             num_of_trials = parseInteger();
             if (num_of_trials > 0) {
@@ -47,6 +50,7 @@ int main() {
             }
             cout<<"Please enter a positive integer for the number of random trials to perform\n";
         }
+        cout<<'\n';
 
         while (true) {
             user_matrix = parseUserInputMatrix();
@@ -59,7 +63,7 @@ int main() {
         }
         cout<<"Computing the minimal negativity of random Birkhoff decompositions out of "<<num_of_trials<<" random trial(s)...\n\n";
 
-        min_negativity_decomposition = get_minimal_negativity_birkhoff_decomposition(user_matrix);
+        min_negativity_decomposition = performRandomTrialsOfBirkhoffDecompositions(num_of_trials, user_matrix);
 
         printNegativityResults(min_negativity_decomposition.first, min_negativity_decomposition.second);
         break;
@@ -107,34 +111,49 @@ int parseProgramMode() {
     return input;
 }
 
-void printProgressBar() {
-    float progress = 0.0;
+void printProgressBar(double progress) {
+    // double progress = 0.0;
     int barWidth = 70;
-    while (progress <= 1.0) {
+    // while (progress <= 1.0) {
 
-        std::cout << "[";
+    //     cout << "[";
+    //     int pos = barWidth * progress;
+    //     for (int i = 0; i < barWidth; ++i) {
+    //         if (i < pos) std::cout << "=";
+    //         else if (i == pos) std::cout << ">";
+    //         else std::cout << " ";
+    //     }
+    //     cout << "] " << int(progress * 100.0) << " %\r";
+    //     cout.flush();
+
+    //     progress += 0.01; // for demonstration only
+    // }
+    if (progress < 1.0) {
+
+        cout << "[";
         int pos = barWidth * progress;
         for (int i = 0; i < barWidth; ++i) {
             if (i < pos) std::cout << "=";
             else if (i == pos) std::cout << ">";
             else std::cout << " ";
         }
-        std::cout << "] " << int(progress * 100.0) << " %\r";
-        std::cout.flush();
+        cout << "] " << int(progress * 100.0) << " %\r";
+        cout.flush();
 
         progress += 0.01; // for demonstration only
-    }
-    std::cout << "[";
-    int pos = barWidth;
-    for (int i = 0; i < barWidth; ++i) {
-        if (i < pos) std::cout << "=";
-        else if (i == pos) std::cout << ">";
-        else std::cout << " ";
-    }
-    std::cout << "] " << "DONE\r";
-    std::cout.flush();
+    } else {
+        cout << "[";
+        int pos = barWidth;
+        for (int i = 0; i < barWidth; ++i) {
+            if (i < pos) cout << "=";
+            else if (i == pos) cout << ">";
+            else cout << " ";
+        }
+        cout << "] " << "DONE\r";
+        cout.flush();
 
-    std::cout << std::endl;
+        cout <<'\n'<< endl;
+    }
 }
 
 matrix parseUserInputMatrix() {
@@ -151,6 +170,7 @@ matrix parseUserInputMatrix() {
             // cout<<"Please enter an integer greater than 0\n";
         }
     }
+    cout<<'\n';
 
     for (int i = 0; i < size; i++) {
         vector<double> v = parseMatrixRows(i, size);
@@ -666,12 +686,54 @@ pair<double, vector<pair<double, vector<int>>>> performRandomTrialsOfBirkhoffDec
         all_one_matrix_normalized.push_back(temp_ones_row);
     }
 
+    /**
+     * Perform random trials
+     */
+    double progress = 0.0;
+    double step_interval = 1.0/num_of_trials;
+
     for (int i = 0; i < num_of_trials; i++) {
+        // printProgressBar(progress);
         double temp_minimal_negativity = 0.0;
+        vector<pair<double, vector<int>>> temp_ones_decomposition;
+        vector<pair<double, vector<int>>> temp_positive_decomposition;
 
-        minimal_negativity = min(temp_minimal_negativity, minimal_negativity);
+        DFS_random_birkhoff_decomposition(temp_positive_decomposition, positive_part, num_of_nonzero_entries_in_positive);
+        DFS_random_birkhoff_decomposition(temp_ones_decomposition, all_one_matrix_normalized, user_matrix.size() * user_matrix.size());
+
+        map<string, double> temp_summing_up_coefficients;
+
+        for (pair<double, vector<int>> positive_part_term : temp_positive_decomposition) {
+            string map_key = "";
+            for (int ele : positive_part_term.second) {
+                map_key += to_string(ele)+",";
+            }
+            temp_summing_up_coefficients.insert({map_key, (1 + user_matrix.size() * delta) * positive_part_term.first});
+            // summing_up_coefficients[map_key] = (1 + m.size() * delta) * positive_part_term.first;
+        }
+        for (pair<double, vector<int>> all_ones_term : temp_ones_decomposition) {
+            string map_key = "";
+            for (int ele : all_ones_term.second) {
+                map_key += to_string(ele)+",";
+            }
+            if (temp_summing_up_coefficients.find(map_key) == temp_summing_up_coefficients.end()) {
+                temp_minimal_negativity += (user_matrix.size() * delta) * all_ones_term.first;
+            } else {
+                double temp_coefficient = temp_summing_up_coefficients[map_key] - (user_matrix.size() * delta) * all_ones_term.first;
+                if (temp_coefficient < 0) {
+                    temp_minimal_negativity += abs(temp_coefficient);
+                }
+            }
+        }
+
+        if (temp_minimal_negativity < minimal_negativity) {
+            minimal_negativity = temp_minimal_negativity;
+            chosen_ones_decomposition = temp_ones_decomposition;
+            chosen_positive_decomposition = temp_positive_decomposition;
+        }
+        progress += step_interval;
     }
-
+    // printProgressBar(progress);
 
     map<string, double> summing_up_coefficients;
 
@@ -701,4 +763,214 @@ pair<double, vector<pair<double, vector<int>>>> performRandomTrialsOfBirkhoffDec
     }
 
     return {minimal_negativity, results};
+}
+
+
+void DFS_random_birkhoff_decomposition(vector<pair<double, vector<int>>> &results, matrix &m, int remaining_entries) {
+    if (remaining_entries == 0) {
+        return;
+    }
+
+    int new_zero_entries = 0;
+    matrix copy_m = m;
+
+    // Use Hopcroft-Karp algorithm to find perfect matching
+    BipartiteGraph bipartiteGraph(m.size(), m.size());
+    for (int i = 0; i < m.size(); i++) {
+        row ele_row = m[i];
+        for (int j = 0; j < ele_row.size(); j++) {
+            double ele = ele_row[j];
+            if (ele > EPS) {
+                bipartiteGraph.addEdge(j+1, i+1);
+            }
+        }
+    }
+    int num_of_matchings = bipartiteGraph.hopcroftKarp();
+    if (num_of_matchings < m.size()) {
+        throw "Hopcroft-Karp algorithm failed to find perfect matching";
+    }
+    vector<int> current_perm = bipartiteGraph.getPermutationMatrix();
+
+    // for (int ele : current_perm) {
+    //     cout<<ele<<" ";
+    // }
+
+    // cout<<endl;
+
+    double min_ele = m[0][current_perm[0]];
+    int counter = 0;
+    for (int i = 0; i < current_perm.size(); i++) {
+        if (m[i][current_perm[i]] < EPS) {
+            if (m[i][current_perm[i]] != 0) {
+                counter++;
+            }
+            copy_m[i][current_perm[i]] = 0;
+        }
+        min_ele = min(min_ele, copy_m[i][current_perm[i]]);
+    }
+    cout<<min_ele<<endl;
+    if (min_ele == 0) {
+        return DFS_random_birkhoff_decomposition(results, copy_m, remaining_entries - counter);
+    }
+
+    for (int i = 0; i < current_perm.size(); i++) {
+        copy_m[i][current_perm[i]] -= min_ele;
+        if (copy_m[i][current_perm[i]] < EPS) {
+            copy_m[i][current_perm[i]] = 0;
+            new_zero_entries++;
+        }
+    }
+    results.push_back({min_ele, current_perm});
+
+    return DFS_random_birkhoff_decomposition(results, copy_m, remaining_entries - new_zero_entries);
+
+
+    // if (current_perm.size() == m.size()) {
+    //     set<int> new_perm_set;
+
+    //     int new_zero_entries = 0;
+    //     matrix copy_m = m;
+    //     double min_ele = m[0][current_perm[0]];
+    //     int counter = 0;
+    //     for (int i = 0; i < current_perm.size(); i++) {
+    //         if (m[i][current_perm[i]] < EPS) {
+    //             if (m[i][current_perm[i]] != 0) {
+    //                 counter++;
+    //             }
+    //             copy_m[i][current_perm[i]] = 0;
+    //         }
+    //         min_ele = min(min_ele, copy_m[i][current_perm[i]]);
+    //     }
+    //     if (min_ele == 0) {
+    //         return DFS_random_birkhoff_decomposition(results, copy_m, new_perm_set, vector<int>{}, remaining_entries - counter);
+    //     }
+
+    //     for (int i = 0; i < current_perm.size(); i++) {
+    //         copy_m[i][current_perm[i]] -= min_ele;
+    //         if (copy_m[i][current_perm[i]] < EPS) {
+    //             copy_m[i][current_perm[i]] = 0;
+    //             new_zero_entries++;
+    //         }
+    //     }
+    //     results.push_back({min_ele, current_perm});
+
+    //     return DFS_random_birkhoff_decomposition(results, copy_m, new_perm_set, vector<int>{}, remaining_entries - new_zero_entries);
+    // }
+
+    // vector<int> new_current_perm = current_perm;
+    // set<int> new_perm_set = perm_set;
+    // vector<int> allowed_perm;
+
+    // for (int i = 0; i < m.size(); i++) {
+    //     if (new_perm_set.find(i) == new_perm_set.end() && m[new_perm_set.size()][i] != 0) {
+    //         allowed_perm.push_back(i);
+    //     } 
+    // }
+
+    // uid randInt(0, allowed_perm.size() -1);
+    // int random_int = randInt(rng);
+    // int chosen_random_perm = allowed_perm[random_int];
+
+    // // int chosen_random_perm = rand() % allowed_perm.size();
+    // new_perm_set.insert(chosen_random_perm);
+    // new_current_perm.push_back(chosen_random_perm);
+
+
+    // DFS_random_birkhoff_decomposition(results, m, new_perm_set, new_current_perm, remaining_entries);
+
+
+}
+
+BipartiteGraph::BipartiteGraph(int m, int n) {
+    this->m = m;
+    this->n = n;
+    for (int i = 0; i <= m; i++) {
+        this->edges.push_back(vector<int>{});
+    }
+}
+
+void BipartiteGraph::addEdge(int u, int v) {
+    this->edges[u].push_back(v);
+}
+
+bool BipartiteGraph::bfs() {
+    queue<int> Q;
+
+    for (int i = 1; i <=this->m; i++) {
+        if (this->pairM[i] == 0) {
+            // unmatched vertex
+            this->distance[i] = 0;
+            Q.push(i);
+
+        } else {
+            this->distance[i] = INT_MAX;
+        }
+    }
+
+    this->distance[0] = INT_MAX;
+
+    while (!Q.empty()) {
+        int u = Q.front();
+        Q.pop();
+
+        if (this->distance[u] < this->distance[0]) {
+            for (int ele : this->edges[u]) {
+                if (this->distance[this->pairN[ele]] == INT_MAX) {
+                    // unexplored edge
+                    this->distance[this->pairN[ele]] = this->distance[u] + 1;
+                    Q.push(this->pairN[ele]);
+                }
+            }
+
+        }
+    }
+
+    return (this->distance[0] != INT_MAX);
+
+}
+
+bool BipartiteGraph::dfs(int u) {
+    if (u != 0) {
+        for (int ele : this->edges[u]) {
+            if (this->distance[this->pairN[ele]] == this->distance[u] + 1) {
+                if (dfs(this->pairN[ele]) == true) {
+                    this->pairM[u] = ele;
+                    this->pairN[ele] = u;
+                    return true;
+                }
+            }
+        }
+
+        this->distance[u] = INT_MAX;
+        return false;
+    }
+    return true;
+
+}
+
+int BipartiteGraph::hopcroftKarp() {
+    this->pairM = vector<int>(this->m + 1, 0);
+    this->pairN = vector<int>(this->n + 1, 0);
+    this->distance = vector<int>(this->m + 1, 0);
+    int result = 0;
+
+    while (bfs()) {
+        for (int i = 1; i <= this->m; i++) {
+            if (this->pairM[i] == 0 && dfs(i)) {
+                result++;
+            }
+
+        }
+    }
+
+    return result;
+}
+
+vector<int> BipartiteGraph::getPermutationMatrix() {
+    vector<int> permutation_matrix;
+    for (int i = 1; i < this->pairN.size(); i++) {
+        // Get the corresponding column index for a given row index
+        permutation_matrix.push_back(pairN[i] - 1);
+    }
+    return permutation_matrix;
 }
