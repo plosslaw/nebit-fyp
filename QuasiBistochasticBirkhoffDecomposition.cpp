@@ -14,6 +14,7 @@ int main() {
     matrix user_matrix;
 
     int option = parseProgramMode();
+    int num_of_trials;
     pair<double, vector<pair<double, vector<int>>>> min_negativity_decomposition;
     switch (option) {
     case 1:
@@ -40,6 +41,33 @@ int main() {
         cout<<"This feature will be added in future updates when we find a better way to reduce \nthe time complexity of finding the minimal negativity Birkhoff decomposition\n\n";
         break;
     case 3:
+        cout<<"\nOption 3 chosen\n\n";
+        cout<<"How many times do you want to perform the randomized search for minimal decomposition for the given quasi-stochastic matrix\n\n";
+        while (true) {
+            num_of_trials = parseInteger();
+            if (num_of_trials > 0) {
+                break;
+            }
+            cout<<"Please enter a positive integer for the number of random trials to perform\n";
+        }
+
+        while (true) {
+            user_matrix = parseUserInputMatrix();
+            cout<<"Checking if input matrix is quasi-bistochastic...\n\n";
+            if (verifyQuasiBistochasticMatrix(user_matrix)) {
+                cout<<"Input matrix is quasi-bistochastic\n\n";
+                break;
+            }
+            cout<<"Input matrix is not quasi-bistochastic, the sum of each column and sum of each row has to be 1.\nPlease enter a new quasi-bistochastic matrix\n\n";
+        }
+        cout<<"Computing the minimal negativity of random Birkhoff decompositions out of "<<num_of_trials<<" random trial(s)...\n\n";
+
+        min_negativity_decomposition = get_minimal_negativity_birkhoff_decomposition(user_matrix);
+
+        printNegativityResults(min_negativity_decomposition.first, min_negativity_decomposition.second);
+        break;
+
+    case 4:
         cout<<"\nProgram will now end. Have a nice day.\n\n";
         break;
     default:
@@ -63,14 +91,16 @@ int parseProgramMode() {
         "\t1. Compute the negativity of quasi-bistochastic matrix using \n\tminimal negativity Birkhoff-von Neumann Decomposition\n\n";
     string second_option_message = 
         "\t2. Compute the rotation matrix for the most negative single qubit unitary \n\toperation using minimal negativity Birkhoff-von Neumann Decomposition\n\n";
-    string third_option_message = "\t3. Exit program\n\n";
-    string start_message = welcome_message + first_option_message + second_option_message + third_option_message;
+    string third_option_message = 
+        "\t3. Approximate the minimal negativity of quasi-bistochastic matrix by performing \n\tsome number of random trials\n\n";
+    string fourth_option_message = "\t4. Exit program\n\n";
+    string start_message = welcome_message + first_option_message + second_option_message + third_option_message + fourth_option_message;
     cout<<start_message;
 
     int input;
     while (true) {
         input = parseInteger();
-        if (input == 1 || input == 2 || input == 3) {
+        if (input == 1 || input == 2 || input == 3 || input == 4) {
             break;
         } else {
             cout<<"Invalid option, please choose one of the options listed\n";
@@ -594,4 +624,84 @@ long long factorial(int n) {
         return 1;
     }
     return n * factorial(n-1);
+}
+
+pair<double, vector<pair<double, vector<int>>>> performRandomTrialsOfBirkhoffDecompositions(int num_of_trials, matrix user_matrix) {
+    double minimal_negativity = INF;
+    vector<pair<double, vector<int>>> results;
+    vector<pair<double, vector<int>>> chosen_positive_decomposition;
+    vector<pair<double, vector<int>>> chosen_ones_decomposition;
+
+    double delta = 0;
+    for (row ele : user_matrix) {
+        for (double ele2 : ele) {
+            delta = min(delta, ele2);
+        }
+    }
+    delta = abs(delta); //make delta positive
+
+    /**
+     * S_ = (1+d*delta) A - d*delta B
+     */
+
+    matrix positive_part;
+    matrix all_one_matrix_normalized;
+    
+    int num_of_nonzero_entries_in_positive = 0;
+
+    for (row ele : user_matrix) {
+        vector<double> temp_row;
+        double normalized_ones = 1.0/user_matrix.size(); // 1/d
+        double positive_norm_constant = 1.0/(1.0 + user_matrix.size()*delta); // 1/(1+d*delta)
+        vector<double> temp_ones_row(user_matrix.size(), normalized_ones);
+        for (double ele2 : ele) {
+            if ((ele2 + delta)*positive_norm_constant < EPS) {
+                temp_row.push_back(0);
+                // cout<<"0\t";
+            } else {
+                temp_row.push_back((ele2 + delta)*positive_norm_constant);
+                num_of_nonzero_entries_in_positive++;
+                // cout<<(ele2 + delta)*positive_norm_constant<<"\t";
+            }
+        }
+        // cout<<'\n';
+        positive_part.push_back(temp_row);
+        all_one_matrix_normalized.push_back(temp_ones_row);
+    }
+
+    for (int i = 0; i < num_of_trials; i++) {
+        double temp_minimal_negativity = 0.0;
+
+        minimal_negativity = min(temp_minimal_negativity, minimal_negativity);
+    }
+
+
+    map<string, double> summing_up_coefficients;
+
+    for (pair<double, vector<int>> positive_part_term : chosen_positive_decomposition) {
+        string map_key = "";
+        for (int ele : positive_part_term.second) {
+            map_key += to_string(ele) + ",";
+        }
+        summing_up_coefficients.insert({map_key, (1 + user_matrix.size() * delta) * positive_part_term.first});
+        // summing_up_coefficients[map_key] = (1 + m.size() * delta) * positive_part_term.first;
+    }
+    for (pair<double, vector<int>> all_ones_term : chosen_ones_decomposition) {
+        string map_key = "";
+        for (int ele : all_ones_term.second) {
+            map_key += to_string(ele) + ",";
+        }
+        if (summing_up_coefficients.find(map_key) == summing_up_coefficients.end()) {
+            results.push_back({(user_matrix.size() * delta * -1) * all_ones_term.first, all_ones_term.second});
+        } else {
+            summing_up_coefficients[map_key] -= (user_matrix.size() * delta) * all_ones_term.first;
+
+        }
+    }
+
+    for (pair<string, double> ele : summing_up_coefficients) {
+        results.push_back({ele.second, convertCSVToVector(ele.first)});
+    }
+
+    return {minimal_negativity, results};
 }
