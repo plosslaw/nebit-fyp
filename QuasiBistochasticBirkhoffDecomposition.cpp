@@ -1,7 +1,4 @@
 #include "QuasiBistochasticBirkhoffDecomposition.h"
-#include <algorithm>
-#include <sstream>
-#include <string>
 
 using namespace std;
 
