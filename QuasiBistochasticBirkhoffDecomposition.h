@@ -49,7 +49,6 @@ std::vector<int> convertCSVToVector(std::string csv_string);
 
 void printNegativityResults(double negativity, std::vector<std::pair<double, std::vector<int>>> min_negativity_decomposition);
 void printPositiveNegativeResults(double negativity, std::pair<matrix, matrix> positive_negative_decomposition);
-void printMostNegativeSingleQubitRotation();
 
 std::pair<double, std::vector<std::pair<double, std::vector<int>>>> get_minimal_negativity_birkhoff_decomposition(matrix m);
 void DFS_all_birkhoff_decomposition(std::vector<std::vector<std::pair<double, std::vector<int>>>> &results, matrix &m, 
@@ -64,3 +63,9 @@ void DFS_random_birkhoff_decomposition(std::vector<std::pair<double, std::vector
 
 std::pair<double, std::pair<matrix, matrix>> performGreedyMinimalNegativityDecomposition(matrix m);
 bool verifyDecomposition(matrix m, matrix positive, matrix negative);
+
+std::pair<double, std::pair<matrix, matrix>> calculateMostNegativeSingleQubitUnitary(double step_interval); 
+void printMostNegativeSingleQubitRotation(double negativity, matrix rotation, matrix quasi_bistochastic);
+
+double dot_product(std::vector<double> v1, std::vector<double> v2);
+std::vector<double> matrix_vector_multiply(matrix m, std::vector<double> v);

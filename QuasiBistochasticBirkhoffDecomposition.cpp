@@ -5,6 +5,7 @@ using namespace std;
 
 const double EPS = 1e-7;
 const double INF = 1e7;
+const double PI = 3.1415926535897932384626433832;
 
 mt19937 rng(chrono::steady_clock::now().time_since_epoch().count());
 #define uid uniform_int_distribution<int>
@@ -15,8 +16,10 @@ int main() {
 
     int option = parseProgramMode();
     int num_of_trials;
+    double step_interval;
     pair<double, vector<pair<double, vector<int>>>> min_negativity_decomposition;
     pair<double, pair<matrix, matrix>> positive_negative_decomposition;
+    pair<double, pair<matrix, matrix>> most_negative_rotation_results;
     switch (option) {
     case 1:
         cout<<"\nOption 1 chosen\n\n";
@@ -39,7 +42,20 @@ int main() {
         break;
     case 2:
         cout<<"\nOption 2 chosen\n\n";
-        cout<<"This feature will be added in future updates when we find a better way to reduce \nthe time complexity of finding the minimal negativity Birkhoff decomposition\n\n";
+        cout<<"Input the step interval in radians (at least 0.0001) for the search for \nthe most negative single qubit unitary\n\n";
+        // cout<<"This feature will be added in future updates when we find a better way to reduce \nthe time complexity of finding the minimal negativity Birkhoff decomposition\n\n";
+        while (true) {
+            step_interval = parseDouble();
+            if (step_interval >= 0.0001) {
+                break;
+            }
+            cout<<"Please enter a positive step interval larger than 0.0001 radians\n";
+        }
+        cout<<'\n';
+        
+        most_negative_rotation_results = calculateMostNegativeSingleQubitUnitary(step_interval);
+
+        printMostNegativeSingleQubitRotation(most_negative_rotation_results.first, most_negative_rotation_results.second.first, most_negative_rotation_results.second.second);
         break;
     case 3:
         cout<<"\nOption 3 chosen\n\n";
@@ -1050,12 +1066,12 @@ pair<double, pair<matrix, matrix>>  performGreedyMinimalNegativityDecomposition(
     sort(negative_element_ranking.begin(), negative_element_ranking.end(), less_than_pair_first);
 
     // for debugging and viewing negative elements of quasi-bistochastic matrix
-    cout<<"ranking list of negative elements: ";
-    for (pair<double, pair<int, int>> ele : negative_element_ranking) {
-        cout<<ele.first<<" ";
-    }
+    // cout<<"ranking list of negative elements: ";
+    // for (pair<double, pair<int, int>> ele : negative_element_ranking) {
+    //     cout<<ele.first<<" ";
+    // }
 
-    cout<<endl;
+    // cout<<endl;
 
     while (!negative_element_ranking.empty()) {
         vector<pair<double, pair<int, int>>> negative_element_ranking_temp = negative_element_ranking;
@@ -1150,4 +1166,116 @@ bool verifyDecomposition(matrix m, matrix positive, matrix negative) {
         }
     }
     return true;
+}
+
+
+
+pair<double, pair<matrix, matrix>> calculateMostNegativeSingleQubitUnitary(double step_interval) {
+    double max_negativity = 0.0;
+    matrix chosen_rotation;
+    matrix chosen_quasi_bistochastic;
+
+    matrix rotation;
+    matrix quasi_bistochastic;
+
+    for (int i = 0; i < 3; i++) {
+        rotation.push_back(vector<double>(3, 0));
+    }
+
+    for (int i = 0; i < 4; i++) {
+        quasi_bistochastic.push_back(vector<double>(4, 0));
+    }
+    vector<double> n_0 = {0, sqrt(2.0/3), 1/sqrt(3)};
+    vector<double> n_1 = {0, -1*sqrt(2.0/3), 1/sqrt(3)};
+    vector<double> n_2 = {sqrt(2.0/3), 0, -1/sqrt(3)};
+    vector<double> n_3 = {-1*sqrt(2.0/3), 0, -1/sqrt(3)};
+
+    vector<vector<double>> n_set;
+    n_set.push_back(n_0);
+    n_set.push_back(n_1);
+    n_set.push_back(n_2);
+    n_set.push_back(n_3);
+
+    double progress = 0.0;
+    double progress_interval = step_interval/2/PI;
+
+    // construct rotation matrix using Tait-Bryan angles
+    for (double alpha = 0; alpha < 2*PI; alpha += step_interval) {
+        printProgressBar(progress);
+        for (double beta = 0; beta < 2*PI; beta += step_interval) {
+            for (double gamma = 0; gamma < 2*PI; gamma += step_interval) {
+                rotation[0][0] = cos(alpha) * cos(beta);
+                rotation[0][1] = cos(alpha) * sin(beta) * sin(gamma) - sin(alpha) * cos(gamma);
+                rotation[0][2] = cos(alpha) * sin(beta) * cos(gamma) + sin(alpha) * sin(gamma);
+                rotation[1][0] = sin(alpha) * cos(beta);
+                rotation[1][1] = sin(alpha) * sin(beta) * sin(gamma) + cos(alpha) * cos(gamma);
+                rotation[1][2] = sin(alpha) * sin(beta) * cos(gamma) - cos(alpha) * sin(gamma);
+                rotation[2][0] = -1 * sin(beta);
+                rotation[2][1] = cos(beta) * sin(gamma);
+                rotation[2][2] = cos(beta) * cos(gamma);
+
+                vector<double> n_a;
+                vector<double> n_b;
+                for (int i = 0; i < 4; i++) {
+                    for (int j = 0; j < 4; j++) {
+                        quasi_bistochastic[i][j] =  1.0/4 + 3.0/4 * dot_product(matrix_vector_multiply(rotation, n_set[i]), n_set[j]);
+                    }
+                }
+
+                pair<double, pair<matrix, matrix>>temp_greedy_decomposition = performGreedyMinimalNegativityDecomposition(quasi_bistochastic);
+                if (temp_greedy_decomposition.first > max_negativity) {
+                    max_negativity = temp_greedy_decomposition.first;
+                    chosen_quasi_bistochastic = quasi_bistochastic;
+                    chosen_rotation = rotation;
+                }
+            }
+        }
+
+        progress += progress_interval;
+    }
+    printProgressBar(progress);
+
+    return {max_negativity, {chosen_rotation, chosen_quasi_bistochastic}};
+}
+
+void printMostNegativeSingleQubitRotation(double negativity, matrix rotation, matrix quasi_bistochastic) {
+    cout<<"\n======ROTATION MATRIX======\n";
+    for (row ele : rotation) {
+        for (double ele2 : ele) {
+            cout<<fixed<<setprecision(4)<<ele2<<"\t";
+        }
+        cout<<"\n\n";
+    }
+
+    cout<<"\n======QUASI-BISTOCHASTIC MATRIX======\n";
+    for (row ele : quasi_bistochastic) {
+        for (double ele2 : ele) {
+            cout<<fixed<<setprecision(4)<<ele2<<"\t";
+        }
+        cout<<"\n\n";
+    }
+
+    cout<<"The negativity of the most negative single qubit unitary using \ngreedy minimal negativity decomposition is \n\n";
+    cout<<fixed<<setprecision(5)<<negativity<<"\n\n";
+}
+
+
+
+double dot_product(vector<double> v1, vector<double> v2) {
+    double result = 0.0;
+    for (int i = 0; i < v1.size(); i++) {
+        result += v1[i] * v2[i];
+    }
+    return result;
+}
+
+vector<double> matrix_vector_multiply(matrix m, vector<double> v) {
+    vector<double> result(m.size(), 0.0);
+    for (int i = 0; i < m.size(); i++) {
+        for (int j = 0; j < m.size(); j++) {
+            result[i] += m[i][j] * v[j];
+        }
+    }
+
+    return result;
 }

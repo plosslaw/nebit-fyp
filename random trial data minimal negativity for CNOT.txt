@@ -1,5 +1,5 @@
 all trials are performed with 1000 random sub-trials of Birkhoff-von Neumann decompositions
-
+without forcing intersections: 7.57539
 minimal negativity found: 4.71808
 
 trial 1 : 5.09826
