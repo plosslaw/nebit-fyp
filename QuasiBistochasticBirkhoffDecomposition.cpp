@@ -1175,6 +1175,10 @@ pair<double, pair<matrix, matrix>> calculateMostNegativeSingleQubitUnitary(doubl
     matrix chosen_rotation;
     matrix chosen_quasi_bistochastic;
 
+    double chosen_alpha = 0.0;
+    double chosen_beta = 0.0;
+    double chosen_gamma = 0.0;
+
     matrix rotation;
     matrix quasi_bistochastic;
 
@@ -1227,6 +1231,10 @@ pair<double, pair<matrix, matrix>> calculateMostNegativeSingleQubitUnitary(doubl
                     max_negativity = temp_greedy_decomposition.first;
                     chosen_quasi_bistochastic = quasi_bistochastic;
                     chosen_rotation = rotation;
+
+                    chosen_alpha = alpha;
+                    chosen_beta = beta;
+                    chosen_gamma = gamma;
                 }
             }
         }
@@ -1234,6 +1242,8 @@ pair<double, pair<matrix, matrix>> calculateMostNegativeSingleQubitUnitary(doubl
         progress += progress_interval;
     }
     printProgressBar(progress);
+
+    cout<<fixed<<setprecision(5)<<"\n Tait-Bryan Angles (alpha, beta, gamma): " <<chosen_alpha<<" "<<chosen_beta<<" "<<chosen_gamma<<"\n\n";
 
     return {max_negativity, {chosen_rotation, chosen_quasi_bistochastic}};
 }
