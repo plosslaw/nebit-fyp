@@ -1,0 +1,30 @@
+all trials are performed with 1000 random sub-trials of Birkhoff-von Neumann decompositions
+
+minimal negativity found: 4.71808
+
+trial 1 : 5.09826
+trial 2 : 5.16429
+trial 3 : 5.03639
+trial 4 : 5.07723
+trial 5 : 5.13689
+trial 6 : 4.85882
+trial 7 : 4.73266
+trial 8 : 5.04124
+trial 9 : 5.04623
+trial 10 : 5.06582
+trial 11 : 5.06942
+trial 12 : 4.92509
+trial 13 : 5.01366
+trial 14 : 5.04437
+trial 15 : 5.09826
+trial 16 : 4.98564
+trial 17 : 4.79754
+trial 18 : 5.04220
+trial 19 : 5.01846
+trial 20 : 5.04580
+trial 21 : 5.06188
+trial 22 : 4.71808
+trial 23 : 5.09503
+trial 24 : 4.90296
+trial 25 : 5.11458
+

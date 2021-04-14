@@ -58,4 +58,4 @@ void DFS_all_birkhoff_decomposition(std::vector<std::vector<std::pair<double, st
 long long factorial(int n);
 
 std::pair<double, std::vector<std::pair<double, std::vector<int>>>> performRandomTrialsOfBirkhoffDecompositions(int num_of_trials, matrix user_matrix);
-void DFS_random_birkhoff_decomposition(std::vector<std::pair<double, std::vector<int>>> &results, matrix &m, int remaining_entries);
+void DFS_random_birkhoff_decomposition(std::vector<std::pair<double, std::vector<int>>> &results, matrix &m, int remaining_entries, std::vector<std::vector<int>> &preferred_decomposition, int pref_counter, bool &failed);

@@ -3,7 +3,7 @@
 using namespace std;
 
 
-const double EPS = 1e-6;
+const double EPS = 1e-7;
 const double INF = 1e7;
 
 mt19937 rng(chrono::steady_clock::now().time_since_epoch().count());
@@ -206,7 +206,7 @@ int parseInteger() {
 
 vector<double> parseMatrixRows(int row_number, int size) {
     vector<double> input_row;
-    cout<<"Enter row entries (double values) for row "<<row_number<<'\n';
+    cout<<"Enter row entries (double values, ensure entries are accurate up to 10 dp) for row "<<row_number<<'\n';
 
     bool continue_loop = true;
     while (continue_loop) {
@@ -698,10 +698,20 @@ pair<double, vector<pair<double, vector<int>>>> performRandomTrialsOfBirkhoffDec
         double temp_minimal_negativity = 0.0;
         vector<pair<double, vector<int>>> temp_ones_decomposition;
         vector<pair<double, vector<int>>> temp_positive_decomposition;
+        vector<vector<int>> no_preference;
+        bool failed = false;
 
-        DFS_random_birkhoff_decomposition(temp_positive_decomposition, positive_part, num_of_nonzero_entries_in_positive);
-        DFS_random_birkhoff_decomposition(temp_ones_decomposition, all_one_matrix_normalized, user_matrix.size() * user_matrix.size());
+        DFS_random_birkhoff_decomposition(temp_ones_decomposition, all_one_matrix_normalized, user_matrix.size() * user_matrix.size(), no_preference, 0, failed);
+        vector<vector<int>> preferred_decomposition;
 
+        for (pair<double, vector<int>> ele : temp_ones_decomposition) {
+            preferred_decomposition.push_back(ele.second);
+        }
+
+        DFS_random_birkhoff_decomposition(temp_positive_decomposition, positive_part, num_of_nonzero_entries_in_positive, preferred_decomposition, 0, failed);
+        if (failed) {
+            continue;
+        }
         map<string, double> temp_summing_up_coefficients;
 
         for (pair<double, vector<int>> positive_part_term : temp_positive_decomposition) {
@@ -777,14 +787,45 @@ pair<double, vector<pair<double, vector<int>>>> performRandomTrialsOfBirkhoffDec
 }
 
 
-void DFS_random_birkhoff_decomposition(vector<pair<double, vector<int>>> &results, matrix &m, int remaining_entries) {
+void DFS_random_birkhoff_decomposition(vector<pair<double, vector<int>>> &results, matrix &m, int remaining_entries, 
+    vector<vector<int>> &preferred_decomposition, int pref_counter, bool &failed) {
     if (remaining_entries == 0) {
         return;
     }
 
     int new_zero_entries = 0;
     matrix copy_m = m;
+    int counter = 0;
 
+    if (pref_counter < preferred_decomposition.size()) {
+        vector<int> preferred_perm = preferred_decomposition[pref_counter];
+        double min_ele = m[0][preferred_perm[0]];
+        for (int i = 0; i < preferred_perm.size(); i++) {
+            if (m[i][preferred_perm[i]] < EPS) {
+                if (m[i][preferred_perm[i]] != 0) {
+                    counter++;
+                }
+                copy_m[i][preferred_perm[i]] = 0;
+            }
+            min_ele = min(min_ele, copy_m[i][preferred_perm[i]]);
+        }
+
+        if (min_ele == 0) {
+            return DFS_random_birkhoff_decomposition(results, copy_m, remaining_entries - counter, preferred_decomposition, pref_counter + 1, failed);
+        }
+
+        for (int i = 0; i < preferred_perm.size(); i++) {
+            copy_m[i][preferred_perm[i]] -= min_ele;
+            if (copy_m[i][preferred_perm[i]] < EPS) {
+                copy_m[i][preferred_perm[i]] = 0;
+                new_zero_entries++;
+            }
+        }
+        results.push_back({min_ele, preferred_perm});
+
+        return DFS_random_birkhoff_decomposition(results, copy_m, remaining_entries - new_zero_entries, preferred_decomposition, pref_counter + 1, failed);
+
+    }
     // Use Hopcroft-Karp algorithm to find perfect matching
     BipartiteGraph bipartiteGraph(m.size(), m.size());
     for (int i = 0; i < m.size(); i++) {
@@ -797,23 +838,25 @@ void DFS_random_birkhoff_decomposition(vector<pair<double, vector<int>>> &result
         }
     }
     int num_of_matchings = bipartiteGraph.hopcroftKarp();
-    int counter = 0;
     
     if (num_of_matchings < m.size()) {
-        cout<<"Hopcroft-Karp algorithm failed to find perfect matching, retrying\n";
-        for (int i = 0; i < m.size(); i++) {
-            for (int j = 0; j < m.size(); j++) {
-                if (m[i][j] < EPS) {
-                    if (m[i][j] != 0) {
-                        counter++;
-                    }
-                    copy_m[i][j] = 0;
-                }
-            }
-        }
-        return DFS_random_birkhoff_decomposition(results, copy_m, remaining_entries - counter);
-
+        cout<<"Hopcroft-Karp algorithm failed to find perfect matching, retrying...\n";
+        // results.clear();
+        failed = true;
+        return;
+        // for (int i = 0; i < m.size(); i++) {
+        //     for (int j = 0; j < m.size(); j++) {
+        //         if (m[i][j] < EPS) {
+        //             if (m[i][j] != 0) {
+        //                 counter++;
+        //             }
+        //             copy_m[i][j] = 0;
+        //         }
+        //     }
+        // }
+        // return DFS_random_birkhoff_decomposition(results, copy_m, remaining_entries - counter, preferred_decomposition, pref_counter);
     }
+    
     vector<int> current_perm = bipartiteGraph.getPermutationMatrix();
 
     double min_ele = m[0][current_perm[0]];
@@ -828,7 +871,7 @@ void DFS_random_birkhoff_decomposition(vector<pair<double, vector<int>>> &result
     }
 
     if (min_ele == 0) {
-        return DFS_random_birkhoff_decomposition(results, copy_m, remaining_entries - counter);
+        return DFS_random_birkhoff_decomposition(results, copy_m, remaining_entries - counter, preferred_decomposition, pref_counter, failed);
     }
 
     for (int i = 0; i < current_perm.size(); i++) {
@@ -840,7 +883,7 @@ void DFS_random_birkhoff_decomposition(vector<pair<double, vector<int>>> &result
     }
     results.push_back({min_ele, current_perm});
 
-    return DFS_random_birkhoff_decomposition(results, copy_m, remaining_entries - new_zero_entries);
+    return DFS_random_birkhoff_decomposition(results, copy_m, remaining_entries - new_zero_entries, preferred_decomposition, pref_counter, failed);
 
 }
 
