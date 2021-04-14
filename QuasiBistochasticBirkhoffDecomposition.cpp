@@ -1050,11 +1050,12 @@ pair<double, pair<matrix, matrix>>  performGreedyMinimalNegativityDecomposition(
     sort(negative_element_ranking.begin(), negative_element_ranking.end(), less_than_pair_first);
 
     // for debugging and viewing negative elements of quasi-bistochastic matrix
-    // for (pair<double, pair<int, int>> ele : negative_element_ranking) {
-    //     cout<<ele.first<<" ";
-    // }
+    cout<<"ranking list of negative elements: ";
+    for (pair<double, pair<int, int>> ele : negative_element_ranking) {
+        cout<<ele.first<<" ";
+    }
 
-    // cout<<endl;
+    cout<<endl;
 
     while (!negative_element_ranking.empty()) {
         vector<pair<double, pair<int, int>>> negative_element_ranking_temp = negative_element_ranking;
@@ -1133,7 +1134,7 @@ void printPositiveNegativeResults(double negativity, pair<matrix, matrix> positi
         cout<<"\n\n";
     }
 
-    cout<<"The negativity of the minimal negativity Birkhoff Decomposition is \n\n";
+    cout<<"The negativity of the greedy minimal negativity decomposition is \n\n";
     cout<<fixed<<setprecision(5)<<negativity<<"\n\n";
 
 }
