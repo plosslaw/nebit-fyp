@@ -48,6 +48,7 @@ bool verifyQuasiBistochasticMatrix(matrix m);
 std::vector<int> convertCSVToVector(std::string csv_string);
 
 void printNegativityResults(double negativity, std::vector<std::pair<double, std::vector<int>>> min_negativity_decomposition);
+void printPositiveNegativeResults(double negativity, std::pair<matrix, matrix> positive_negative_decomposition);
 void printMostNegativeSingleQubitRotation();
 
 std::pair<double, std::vector<std::pair<double, std::vector<int>>>> get_minimal_negativity_birkhoff_decomposition(matrix m);
@@ -59,3 +60,6 @@ long long factorial(int n);
 
 std::pair<double, std::vector<std::pair<double, std::vector<int>>>> performRandomTrialsOfBirkhoffDecompositions(int num_of_trials, matrix user_matrix);
 void DFS_random_birkhoff_decomposition(std::vector<std::pair<double, std::vector<int>>> &results, matrix &m, int remaining_entries, std::vector<std::vector<int>> &preferred_decomposition, int pref_counter, bool &failed);
+
+
+std::pair<double, std::pair<matrix, matrix>> performGreedyMinimalNegativityDecomposition(matrix m);

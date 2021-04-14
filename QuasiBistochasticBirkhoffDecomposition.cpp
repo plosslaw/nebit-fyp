@@ -16,6 +16,7 @@ int main() {
     int option = parseProgramMode();
     int num_of_trials;
     pair<double, vector<pair<double, vector<int>>>> min_negativity_decomposition;
+    pair<double, pair<matrix, matrix>> positive_negative_decomposition;
     switch (option) {
     case 1:
         cout<<"\nOption 1 chosen\n\n";
@@ -69,6 +70,24 @@ int main() {
         break;
 
     case 4:
+        cout<<"\nOption 4 chosen\n\n";
+
+        while (true) {
+            user_matrix = parseUserInputMatrix();
+            cout<<"Checking if input matrix is quasi-bistochastic...\n\n";
+            if (verifyQuasiBistochasticMatrix(user_matrix)) {
+                cout<<"Input matrix is quasi-bistochastic\n\n";
+                break;
+            }
+            cout<<"Input matrix is not quasi-bistochastic, the sum of each column and sum of each row has to be 1.\nPlease enter a new quasi-bistochastic matrix\n\n";
+        }
+        cout<<"Computing the minimal negativity of quasi-bistochastic matrix using \ngreedy minimal negativity decomposition...\n\n";
+
+        positive_negative_decomposition = performGreedyMinimalNegativityDecomposition(user_matrix);
+        printPositiveNegativeResults(positive_negative_decomposition.first, positive_negative_decomposition.second);
+        break;
+
+    case 5:
         cout<<"\nProgram will now end. Have a nice day.\n\n";
         break;
     default:
@@ -94,14 +113,18 @@ int parseProgramMode() {
         "\t2. Compute the rotation matrix for the most negative single qubit unitary \n\toperation using minimal negativity Birkhoff-von Neumann Decomposition\n\n";
     string third_option_message = 
         "\t3. Approximate the minimal negativity of quasi-bistochastic matrix by performing \n\tsome number of random trials\n\n";
-    string fourth_option_message = "\t4. Exit program\n\n";
-    string start_message = welcome_message + first_option_message + second_option_message + third_option_message + fourth_option_message;
+    string fourth_option_message = 
+        "\t4. Compute minimal negativity of quasi-bistochastic matrix using greedy \n\tminimal negativity decomposition\n\n";
+
+    string exit_option_message = "\t5. Exit program\n\n";
+    string start_message = welcome_message + first_option_message + second_option_message +
+        third_option_message + fourth_option_message + exit_option_message;
     cout<<start_message;
 
     int input;
     while (true) {
         input = parseInteger();
-        if (input == 1 || input == 2 || input == 3 || input == 4) {
+        if (input == 1 || input == 2 || input == 3 || input == 4 || input == 5) {
             break;
         } else {
             cout<<"Invalid option, please choose one of the options listed\n";
@@ -989,4 +1012,121 @@ vector<int> BipartiteGraph::getPermutationMatrix() {
         permutation_matrix.push_back(pairN[i] - 1);
     }
     return permutation_matrix;
+}
+
+
+bool less_than_pair_first (const pair<double, pair<int, int>> &p1, const pair<double, pair<int,int>> &p2) {
+    return (p1.first < p2.first);
+}
+
+
+pair<double, pair<matrix, matrix>>  performGreedyMinimalNegativityDecomposition(matrix m) {
+    double minimal_negativity = 0.0;
+    pair<matrix, matrix> positive_negative_decomposition;
+    matrix positive_part = m;
+    matrix negative_part;
+
+    for (int i = 0; i < m.size(); i++) {
+        negative_part.push_back(vector<double>(m.size(), 0));
+    }
+
+    vector<pair<double, pair<int, int>>>negative_element_ranking;
+
+    for (int i = 0; i < m.size(); i++) {
+        for (int j = 0; j < m.size(); j++) {
+            if (m[i][j] < 0) {
+                negative_element_ranking.push_back({m[i][j] ,{i,j}});
+            }
+        }
+    }
+
+    sort(negative_element_ranking.begin(), negative_element_ranking.end(), less_than_pair_first);
+
+    // for debugging and viewing negative elements of quasi-bistochastic matrix
+    // for (pair<double, pair<int, int>> ele : negative_element_ranking) {
+    //     cout<<ele.first<<" ";
+    // }
+
+    // cout<<endl;
+
+    while (!negative_element_ranking.empty()) {
+        vector<pair<double, pair<int, int>>> negative_element_ranking_temp = negative_element_ranking;
+
+        vector<int> current_perm(m.size(), -1);
+        set<int> perm_set_row; // row index
+        set<int> perm_set_column; // column index
+
+        pair<double, pair<int, int>> most_negative_element = negative_element_ranking.front();
+
+        perm_set_column.insert(most_negative_element.second.first);
+        perm_set_row.insert(most_negative_element.second.second);
+        current_perm[most_negative_element.second.first] = most_negative_element.second.second;
+        // remove most_negative_element from ranking
+        negative_element_ranking.erase(negative_element_ranking.begin());
+
+        for (int i = 0; i < negative_element_ranking_temp.size(); i++) {
+            pair<double, pair<int, int>> ele = negative_element_ranking_temp[i];
+            if (perm_set_row.find(ele.second.second) != perm_set_row.end() || 
+                perm_set_column.find(ele.second.first) != perm_set_column.end()) {
+                continue;
+            }
+            current_perm[ele.second.first] = ele.second.second;
+            perm_set_column.insert(ele.second.first);
+            perm_set_row.insert(ele.second.second);
+            // remove ele from ranking
+            vector<pair<double, pair<int, int>>>::iterator pos = find(negative_element_ranking.begin(), negative_element_ranking.end(), ele);
+            negative_element_ranking.erase(pos);
+        }
+
+        if (perm_set_row.size() < m.size()) {
+            for (int i = 0; i < m.size(); i++) {
+                if (current_perm[i] == -1) {
+                    for (int j = 0; j < m.size(); j++) {
+                        if (perm_set_row.find(j) == perm_set_row.end()) {
+                            current_perm[i] = j;
+                            perm_set_row.insert(j);
+                            perm_set_column.insert(i);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // successfully created perm matrix
+        for (int i = 0; i < m.size(); i++) {
+            // update positive part and negative part
+            positive_part[i][current_perm[i]] += abs(most_negative_element.first);
+            negative_part[i][current_perm[i]] -= abs(most_negative_element.first);
+        }
+
+        minimal_negativity += abs(most_negative_element.first);
+
+    }
+    positive_negative_decomposition.first = positive_part;
+    positive_negative_decomposition.second = negative_part;
+
+    return {minimal_negativity, positive_negative_decomposition};
+}
+
+void printPositiveNegativeResults(double negativity, pair<matrix, matrix> positive_negative_decomposition) {
+    cout<<"\n======POSITIVE MATRIX PART======\n";
+    for (row ele : positive_negative_decomposition.first) {
+        for (double ele2 : ele) {
+            cout<<fixed<<setprecision(3)<<ele2<<"\t";
+        }
+        cout<<"\n\n";
+    }
+
+    cout<<"\n======NEGATIVE MATRIX PART======\n";
+    for (row ele : positive_negative_decomposition.second) {
+        for (double ele2 : ele) {
+            cout<<fixed<<setprecision(3)<<ele2<<"\t";
+        }
+        cout<<"\n\n";
+    }
+
+    cout<<"The negativity of the minimal negativity Birkhoff Decomposition is \n\n";
+    cout<<fixed<<setprecision(5)<<negativity<<"\n\n";
+
 }
