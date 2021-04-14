@@ -85,6 +85,13 @@ int main() {
 
         positive_negative_decomposition = performGreedyMinimalNegativityDecomposition(user_matrix);
         printPositiveNegativeResults(positive_negative_decomposition.first, positive_negative_decomposition.second);
+        cout<<"\nVerifying decomposition...\n\n";
+        if (verifyDecomposition(user_matrix, positive_negative_decomposition.second.first, positive_negative_decomposition.second.second)) {
+            cout<<"Decomposition is valid!\n\n";
+        } else {
+            cout<<"Decomposition is invalid!\n\n";
+        }
+        
         break;
 
     case 5:
@@ -1129,4 +1136,17 @@ void printPositiveNegativeResults(double negativity, pair<matrix, matrix> positi
     cout<<"The negativity of the minimal negativity Birkhoff Decomposition is \n\n";
     cout<<fixed<<setprecision(5)<<negativity<<"\n\n";
 
+}
+
+
+bool verifyDecomposition(matrix m, matrix positive, matrix negative) {
+    for (int i = 0; i < m.size(); i++) {
+        for (int j = 0; j < m.size(); j++) {
+            if (abs(m[i][j] - positive[i][j] - negative[i][j]) > EPS) {
+                cout<<"leftover difference: "<<abs(m[i][j] - positive[i][j] - negative[i][j])<<endl;
+                return false;
+            }
+        }
+    }
+    return true;
 }

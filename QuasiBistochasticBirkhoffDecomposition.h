@@ -63,3 +63,4 @@ void DFS_random_birkhoff_decomposition(std::vector<std::pair<double, std::vector
 
 
 std::pair<double, std::pair<matrix, matrix>> performGreedyMinimalNegativityDecomposition(matrix m);
+bool verifyDecomposition(matrix m, matrix positive, matrix negative);
