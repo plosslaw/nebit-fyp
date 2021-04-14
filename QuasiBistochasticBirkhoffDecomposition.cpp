@@ -1243,7 +1243,7 @@ pair<double, pair<matrix, matrix>> calculateMostNegativeSingleQubitUnitary(doubl
     }
     printProgressBar(progress);
 
-    cout<<fixed<<setprecision(5)<<"\n Tait-Bryan Angles (alpha, beta, gamma): " <<chosen_alpha<<" "<<chosen_beta<<" "<<chosen_gamma<<"\n\n";
+    cout<<"\n Tait-Bryan Angles (alpha, beta, gamma): " <<chosen_alpha<<" "<<chosen_beta<<" "<<chosen_gamma<<"\n\n";
 
     return {max_negativity, {chosen_rotation, chosen_quasi_bistochastic}};
 }
