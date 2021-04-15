@@ -1202,12 +1202,18 @@ pair<double, pair<matrix, matrix>> calculateMostNegativeSingleQubitUnitary(doubl
 
     double progress = 0.0;
     double progress_interval = step_interval/2/PI;
+    // double progress_interval = step_interval/0.15;
+
+    // Todo(plosslaw): extract out new function to do fine search around found minimum
 
     // construct rotation matrix using Tait-Bryan angles
-    for (double alpha = 0; alpha < 2*PI; alpha += step_interval) {
+    for (double alpha = 0.0; alpha < 2*PI; alpha += step_interval) {
+    // for (double alpha = 2.05; alpha < 2.20; alpha += step_interval) {
         printProgressBar(progress);
-        for (double beta = 0; beta < 2*PI; beta += step_interval) {
-            for (double gamma = 0; gamma < 2*PI; gamma += step_interval) {
+        for (double beta = 0.0; beta < 2*PI; beta += step_interval) {
+        // for (double beta = 2.85; beta < 3.00; beta += step_interval) {
+            for (double gamma = 0.0; gamma < 2*PI; gamma += step_interval) {
+            // for (double gamma = 2.25; gamma < 2.40; gamma += step_interval) {
                 rotation[0][0] = cos(alpha) * cos(beta);
                 rotation[0][1] = cos(alpha) * sin(beta) * sin(gamma) - sin(alpha) * cos(gamma);
                 rotation[0][2] = cos(alpha) * sin(beta) * cos(gamma) + sin(alpha) * sin(gamma);
